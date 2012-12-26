@@ -29,7 +29,7 @@
 #define M_LSD_MMC_DBG  1
 #define M_LSD_USB_DBG  1
 #define M_LSD_NAND_DBG 1
-#define M_LSD_TS_DBG 0
+#define M_LSD_TS_DBG 1
 
 
 // all debug

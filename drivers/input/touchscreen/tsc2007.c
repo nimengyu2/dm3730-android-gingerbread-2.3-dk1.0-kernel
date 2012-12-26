@@ -26,6 +26,7 @@
 #include <linux/interrupt.h>
 #include <linux/i2c.h>
 #include <linux/i2c/tsc2007.h>
+#include <linux/lierda_debug.h>
 
 #define TS_POLL_DELAY			1 /* ms delay between samples */
 #define TS_POLL_PERIOD			1 /* ms delay between samples */
@@ -184,7 +185,8 @@ static void tsc2007_work(struct work_struct *work)
 	tsc2007_read_values(ts, &tc);
 
 	rt = tsc2007_calculate_pressure(ts, &tc);
-	if (rt > MAX_12BIT) {
+	//if (rt > MAX_12BIT) {
+	if (rt > 300) {
 		/*
 		 * Sample found inconsistent by debouncing or pressure is
 		 * beyond the maximum. Don't report it to user space,
@@ -213,6 +215,8 @@ static void tsc2007_work(struct work_struct *work)
 
 		dev_dbg(&ts->client->dev, "point(%4d,%4d), pressure (%4u)\n",
 			tc.x, tc.y, rt);
+		printk("point(%4d,%4d), pressure (%4u)\n",
+			tc.x, tc.y, rt);
 
 	} else if (!ts->get_pendown_state && ts->pendown) {
 		/*
@@ -235,6 +239,7 @@ static void tsc2007_work(struct work_struct *work)
 static irqreturn_t tsc2007_irq(int irq, void *handle)
 {
 	struct tsc2007 *ts = handle;
+	//lsd_ts_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 
 	if (!ts->get_pendown_state || likely(ts->get_pendown_state())) {
 		disable_irq_nosync(ts->irq);
@@ -268,6 +273,8 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 	struct tsc2007_platform_data *pdata = pdata = client->dev.platform_data;
 	struct input_dev *input_dev;
 	int err;
+
+	lsd_ts_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 
 	if (!pdata) {
 		dev_err(&client->dev, "platform data is required!\n");
@@ -312,7 +319,8 @@ static int __devinit tsc2007_probe(struct i2c_client *client,
 	if (pdata->init_platform_hw)
 		pdata->init_platform_hw();
 
-	err = request_irq(ts->irq, tsc2007_irq, 0,
+	//err = request_irq(ts->irq, tsc2007_irq, 0,
+	 err = request_irq(ts->irq, tsc2007_irq, IRQF_TRIGGER_FALLING,
 			client->dev.driver->name, ts);
 	if (err < 0) {
 		dev_err(&client->dev, "irq %d busy?\n", ts->irq);
@@ -346,7 +354,7 @@ static int __devexit tsc2007_remove(struct i2c_client *client)
 {
 	struct tsc2007	*ts = i2c_get_clientdata(client);
 	struct tsc2007_platform_data *pdata = client->dev.platform_data;
-
+	lsd_ts_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 	tsc2007_free_irq(ts);
 
 	if (pdata->exit_platform_hw)
@@ -377,6 +385,7 @@ static struct i2c_driver tsc2007_driver = {
 
 static int __init tsc2007_init(void)
 {
+	lsd_ts_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 	return i2c_add_driver(&tsc2007_driver);
 }
 

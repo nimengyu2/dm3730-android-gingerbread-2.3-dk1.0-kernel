@@ -689,7 +689,7 @@ static void tsc2007_exit_irq(void)
 static int tsc2007_get_irq_level(void)
 {
 	//pr_warning("%s: lierda_tsc2007_get_irq_level %d\n", __func__, 0);
-	lsd_ts_dbg(LSD_DBG,"enter tsc2007_get_irq_level\n");
+	//lsd_ts_dbg(LSD_DBG,"enter tsc2007_get_irq_level\n");
 	return gpio_get_value(TSC2007_GPIO_IRQ_PIN) ? 0 : 1;
 }
 
