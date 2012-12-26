@@ -24,6 +24,7 @@
 
 static struct omap_video_timings generic_panel_timings = {
 	/* 640 x 480 @ 60 Hz  Reduced blanking VESA CVT 0.31M3-R */
+#if 0
 	.x_res		= 640,
 	.y_res		= 480,
 	.pixel_clock	= 23500,
@@ -33,6 +34,16 @@ static struct omap_video_timings generic_panel_timings = {
 	.vfp		= 3,
 	.vsw		= 4,
 	.vbp		= 7,
+#endif
+	.x_res		= 800,
+	.y_res		= 480,
+	.pixel_clock	= 33300,
+	.hfp		= 210,
+	.hsw		= 3,
+	.hbp		= 46,
+	.vfp		= 22,
+	.vsw		= 3,
+	.vbp		= 23,
 };
 
 static int generic_panel_probe(struct omap_dss_device *dssdev)

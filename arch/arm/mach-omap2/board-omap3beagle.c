@@ -670,6 +670,12 @@ static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
 #endif
 };
 
+static struct i2c_board_info __initdata sbc8100_plus_i2c3_boardinfo[] = {
+       {
+		I2C_BOARD_INFO("pcf8563", 0x51),
+	},
+};
+
 static int __init omap3_beagle_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 2600, beagle_i2c1_boardinfo,
@@ -688,6 +694,8 @@ static int __init omap3_beagle_i2c_init(void)
 	/* Bus 3 is attached to the DVI port where devices like the pico DLP
 	 * projector don't work reliably with 400kHz */
 	omap_register_i2c_bus(3, 100, NULL, 0);
+	//omap_register_i2c_bus(3, 100, sbc8100_plus_i2c3_boardinfo, 
+	//			ARRAY_SIZE(sbc8100_plus_i2c3_boardinfo));
 	return 0;
 }
 
