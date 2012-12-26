@@ -49,6 +49,9 @@
 #include <plat/clock.h>
 #include <plat/omap-pm.h>
 
+#include <linux/lierda_debug.h>
+#include <linux/i2c/tsc2007.h> // Modify by nmy
+
 #include "mux.h"
 #include "mmc-twl4030.h"
 #include "pm.h"
@@ -623,6 +626,87 @@ static struct i2c_board_info __initdata beagle_i2c1_boardinfo[] = {
 };
 
 
+//----------------------------------------------------------------------------//
+//  nmy add tsc2007 code   start  2010-12-10  14:00
+//----------------------------------------------------------------------------//
+
+/*
+ * TSC 2007 Support
+ */
+#define TSC2007_GPIO_IRQ_PIN_TMP	38
+#define TSC2007_GPIO_IRQ_PIN	162
+
+static int tsc2007_init_irq(void)
+{
+	int ret = 0;
+        //pr_warning("%s: lierda_tcs2007_init_irq %d\n", __func__, ret);
+#if 1
+	omap_mux_init_gpio(TSC2007_GPIO_IRQ_PIN_TMP, OMAP_PIN_INPUT_PULLUP);
+
+	ret = gpio_request(TSC2007_GPIO_IRQ_PIN_TMP, "tsc2007-irq-tmp");
+	if (ret < 0) {
+		printk("%s: failed to TSC2007 IRQ GPIO: %d\n", __func__, ret);
+		return ret;
+	}
+	else
+	{
+		printk("%s: ok to TSC2007 IRQ GPIO: %d\n", __func__, ret);
+	}
+
+	gpio_direction_input(TSC2007_GPIO_IRQ_PIN_TMP);
+
+
+	omap_mux_init_gpio(TSC2007_GPIO_IRQ_PIN, OMAP_PIN_INPUT_PULLUP);
+
+	ret = gpio_request(TSC2007_GPIO_IRQ_PIN, "tsc2007-irq");
+	if (ret < 0) {
+		printk("%s: failed to TSC2007 IRQ GPIO: %d\n", __func__, ret);
+		return ret;
+	}
+	else
+	{
+		printk("%s: ok to TSC2007 IRQ GPIO: %d\n", __func__, ret);
+	}
+
+	gpio_direction_input(TSC2007_GPIO_IRQ_PIN);
+
+#endif
+#if 0
+	omap_mux_init_gpio(TSC2007_GPIO_IRQ_PIN, OMAP_PIN_OUTPUT);
+	//omap_mux_init_signal("sdrc_cke0", OMAP_PIN_OUTPUT);
+	gpio_request(TSC2007_GPIO_IRQ_PIN, "tsc2007");
+	gpio_direction_output(TSC2007_GPIO_IRQ_PIN,1);
+	gpio_set_value(TSC2007_GPIO_IRQ_PIN,1);
+#endif
+	return ret;
+}
+
+static void tsc2007_exit_irq(void)
+{
+	gpio_free(TSC2007_GPIO_IRQ_PIN);
+}
+
+static int tsc2007_get_irq_level(void)
+{
+	//pr_warning("%s: lierda_tsc2007_get_irq_level %d\n", __func__, 0);
+	lsd_ts_dbg(LSD_DBG,"enter tsc2007_get_irq_level\n");
+	return gpio_get_value(TSC2007_GPIO_IRQ_PIN) ? 0 : 1;
+}
+
+struct tsc2007_platform_data da850evm_tsc2007data = {
+	.model = 2007,
+	.x_plate_ohms = 180,
+	.get_pendown_state = tsc2007_get_irq_level,
+	.init_platform_hw = tsc2007_init_irq,
+	.exit_platform_hw = tsc2007_exit_irq,
+};
+
+//----------------------------------------------------------------------------//
+//  nmy add tsc2007 code   end  2010-12-10  14:00
+//----------------------------------------------------------------------------//
+
+
+
 #if defined(CONFIG_EEPROM_AT24) || defined(CONFIG_EEPROM_AT24_MODULE)
 #include <linux/i2c/at24.h>
 
@@ -668,6 +752,11 @@ static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
 		.platform_data	= &mt9t112_pdata,
 	},
 #endif
+       {
+	       I2C_BOARD_INFO("tsc2007", 0x48),
+	       .platform_data = &da850evm_tsc2007data,
+		.irq = OMAP_GPIO_IRQ(TSC2007_GPIO_IRQ_PIN),
+       },
 };
 
 static struct i2c_board_info __initdata sbc8100_plus_i2c3_boardinfo[] = {
@@ -678,6 +767,9 @@ static struct i2c_board_info __initdata sbc8100_plus_i2c3_boardinfo[] = {
 
 static int __init omap3_beagle_i2c_init(void)
 {
+	//sbc8100_plus_i2c2_boardinfo[1].irq = OMAP_GPIO_IRQ(TSC2007_GPIO_IRQ_PIN);
+	lsd_dbg(LSD_DBG,"tsc2007 irp=%d\n",OMAP_GPIO_IRQ(TSC2007_GPIO_IRQ_PIN));
+
 	omap_register_i2c_bus(1, 2600, beagle_i2c1_boardinfo,
 			ARRAY_SIZE(beagle_i2c1_boardinfo));
 	if(!strcmp(expansionboard_name, "zippy") || !strcmp(expansionboard_name, "zippy2"))
@@ -899,7 +991,8 @@ static void __init omap3_beagle_init(void)
 		omap3beagle_enc28j60_init();
 		printk(KERN_INFO "Beagle expansionboard: assigning GPIO 141 and 162 to MMC1\n");
 		mmc[1].gpio_wp = 141;
-		mmc[1].gpio_cd = 162;
+		//mmc[1].gpio_cd = 162;
+		mmc[1].gpio_cd = NULL;
 	}
 
 	if(!strcmp(expansionboard_name, "zippy2"))
@@ -908,7 +1001,8 @@ static void __init omap3_beagle_init(void)
 		omap3beagle_ks8851_init();
 		printk(KERN_INFO "Beagle expansionboard: assigning GPIO 141 and 162 to MMC1\n");
 		mmc[1].gpio_wp = 141;
-		mmc[1].gpio_cd = 162;
+		//mmc[1].gpio_cd = 162;
+		mmc[1].gpio_cd = NULL;
 	}
 
 	if(!strcmp(expansionboard_name, "trainer"))
@@ -938,8 +1032,8 @@ static void __init omap3_beagle_init(void)
 		gpio_export(140, 1);
 		gpio_request(141, "sysfs");
 		gpio_export(141, 1);
-		gpio_request(162, "sysfs");
-		gpio_export(162, 1);
+		//gpio_request(162, "sysfs");
+		//gpio_export(162, 1);
 	}
 
 	usb_musb_init();
