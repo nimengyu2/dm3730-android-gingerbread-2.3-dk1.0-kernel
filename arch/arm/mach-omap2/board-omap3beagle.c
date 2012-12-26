@@ -822,6 +822,7 @@ static struct platform_device leds_gpio = {
 	},
 };
 
+#if 0
 static struct gpio_keys_button gpio_buttons[] = {
 	{
 		.code			= BTN_EXTRA,
@@ -843,7 +844,74 @@ static struct platform_device keys_gpio = {
 		.platform_data	= &gpio_key_info,
 	},
 };
+#endif
 
+
+#if 1
+#define GPIO_KEY10   		24
+#define GPIO_KEY9    		43
+#define GPIO_KEY8    		26
+#define GPIO_KEY7    		27
+static struct gpio_keys_button am335x_evm_volume_gpio_buttons[] = {
+	{
+		.code                   = KEY_MENU,
+		.gpio                   = GPIO_KEY10,
+		.active_low             = true,
+		.desc                   = "menu",
+		.type                   = EV_KEY,
+		.wakeup                 = 1,
+	},
+	{
+		.code                   = KEY_BACK,
+		.gpio                   = GPIO_KEY9,
+		.active_low             = true,
+		.desc                   = "back",
+		.type                   = EV_KEY,
+		.wakeup                 = 1,
+	},
+	{
+		.code                   = KEY_VOLUMEUP,
+		.gpio                   = GPIO_KEY8,
+		.active_low             = true,
+		.desc                   = "volumeup",
+		.type                   = EV_KEY,
+		.wakeup                 = 1,
+	},
+	{
+		.code                   = KEY_VOLUMEDOWN,
+		.gpio                   = GPIO_KEY7,
+		.active_low             = true,
+		.desc                   = "volumedown",
+		.type                   = EV_KEY,
+		.wakeup                 = 1,
+	},
+};
+
+static struct gpio_keys_platform_data am335x_evm_volume_gpio_key_info = {
+	.buttons        = am335x_evm_volume_gpio_buttons,
+	.nbuttons       = ARRAY_SIZE(am335x_evm_volume_gpio_buttons),
+};
+
+static struct platform_device keys_gpio = {
+	.name   = "gpio-keys",
+	.id     = -1,
+	.dev    = {
+		.platform_data  = &am335x_evm_volume_gpio_key_info,
+	},
+};
+
+
+
+static void volume_keys_init(void)
+{
+	int err;
+	omap_mux_init_gpio(24, OMAP_PIN_INPUT_PULLUP);   // KEY10
+	omap_mux_init_gpio(43, OMAP_PIN_INPUT_PULLUP);   // KEY9
+	omap_mux_init_gpio(26, OMAP_PIN_INPUT_PULLUP);   // KEY8
+	omap_mux_init_gpio(27, OMAP_PIN_INPUT_PULLUP);   // KEY7
+	lsd_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
+}
+#endif
 static void __init omap3_beagle_init_irq(void)
 {
         if (cpu_is_omap3630())
@@ -979,6 +1047,8 @@ static void __init omap3_beagle_init(void)
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_serial_init();
+
+	volume_keys_init();
 
 	omap_mux_init_gpio(170, OMAP_PIN_INPUT);
 	gpio_request(170, "DVI_nPD");

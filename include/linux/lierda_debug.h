@@ -30,6 +30,7 @@
 #define M_LSD_USB_DBG  1
 #define M_LSD_NAND_DBG 1
 #define M_LSD_TS_DBG 1
+#define M_LSD_KEY_DBG 1
 
 
 // all debug
@@ -112,6 +113,15 @@
 		level,strrchr(__FILE__,'/') + 1,__FUNCTION__,__LINE__,## arg)
 #else
 #define lsd_ts_dbg(level,format, arg...) 
+#endif
+
+// key debug
+#if(M_LSD_KEY_DBG >= 1)
+#define lsd_key_dbg(level,format, arg...) \
+	printk("---KEY---%s---file=%s,func=%s,line=%d++++  " format ,\
+		level,strrchr(__FILE__,'/') + 1,__FUNCTION__,__LINE__,## arg)
+#else
+#define lsd_key_dbg(level,format, arg...) 
 #endif
 
 #endif /* _Z_UTIL_H */

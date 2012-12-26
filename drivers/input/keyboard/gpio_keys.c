@@ -24,6 +24,7 @@
 #include <linux/gpio_keys.h>
 #include <linux/workqueue.h>
 #include <linux/gpio.h>
+#include <linux/lierda_debug.h>
 
 struct gpio_button_data {
 	struct gpio_keys_button *button;
@@ -43,7 +44,7 @@ static void gpio_keys_report_event(struct gpio_button_data *bdata)
 	struct input_dev *input = bdata->input;
 	unsigned int type = button->type ?: EV_KEY;
 	int state = (gpio_get_value(button->gpio) ? 1 : 0) ^ button->active_low;
-
+	lsd_key_dbg(LSD_DBG,"gpio_keys_report_event:button->code=%d,state=%d\n",button->code,state);
 	input_event(input, type, button->code, !!state);
 	input_sync(input);
 }
@@ -67,6 +68,8 @@ static irqreturn_t gpio_keys_isr(int irq, void *dev_id)
 {
 	struct gpio_button_data *bdata = dev_id;
 	struct gpio_keys_button *button = bdata->button;
+
+	lsd_key_dbg(LSD_DBG,"enter interrupt gpio_keys_isr\n");
 
 	BUG_ON(irq != gpio_to_irq(button->gpio));
 
@@ -93,7 +96,14 @@ static int __devinit gpio_keys_setup_key(struct device *dev,
 	if (error < 0) {
 		dev_err(dev, "failed to request GPIO %d, error %d\n",
 			button->gpio, error);
+		lsd_key_dbg(LSD_ERR,"failed to request GPIO %d, error %d\n",
+			button->gpio, error);
 		goto fail2;
+	}
+	else
+	{
+		lsd_key_dbg(LSD_OK,"ok to request GPIO %d, ok ret %d\n",
+			button->gpio, error);
 	}
 
 	error = gpio_direction_input(button->gpio);
@@ -101,7 +111,16 @@ static int __devinit gpio_keys_setup_key(struct device *dev,
 		dev_err(dev, "failed to configure"
 			" direction for GPIO %d, error %d\n",
 			button->gpio, error);
+		lsd_key_dbg(LSD_ERR,"failed to configure"
+			" direction for GPIO %d, error %d\n",
+			button->gpio, error);
 		goto fail3;
+	}
+	else
+	{
+		lsd_key_dbg(LSD_OK,"ok to configure"
+			" direction for GPIO %d, ok ret= %d\n",
+			button->gpio, error);
 	}
 
 	irq = gpio_to_irq(button->gpio);
@@ -109,7 +128,14 @@ static int __devinit gpio_keys_setup_key(struct device *dev,
 		error = irq;
 		dev_err(dev, "Unable to get irq number for GPIO %d, error %d\n",
 			button->gpio, error);
+		lsd_key_dbg(LSD_ERR,"Unable to get irq number for GPIO %d, error %d\n",
+			button->gpio, error);
 		goto fail3;
+	}
+	else
+	{
+		lsd_key_dbg(LSD_OK,"able to get irq number for GPIO %d, ok ret= %d\n",
+			button->gpio, error);
 	}
 
 	error = request_irq(irq, gpio_keys_isr,
@@ -119,7 +145,14 @@ static int __devinit gpio_keys_setup_key(struct device *dev,
 	if (error) {
 		dev_err(dev, "Unable to claim irq %d; error %d\n",
 			irq, error);
+		lsd_key_dbg(LSD_ERR, "Unable to claim irq %d; error %d\n",
+			irq, error);
 		goto fail3;
+	}
+	else
+	{
+		lsd_key_dbg(LSD_OK, "can able to claim irq %d; ok ret= %d\n",
+			irq, error);
 	}
 
 	return 0;
