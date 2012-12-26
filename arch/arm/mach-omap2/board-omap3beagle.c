@@ -873,6 +873,7 @@ static int __init expansionboard_setup(char *str)
 
 static void __init omap3_beagle_init(void)
 {
+	printk("enter func=%s\n",__FUNCTION__);
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	omap3_beagle_i2c_init();
 	platform_add_devices(omap3_beagle_devices,
