@@ -855,7 +855,7 @@ static struct platform_device keys_gpio = {
 static struct gpio_keys_button am335x_evm_volume_gpio_buttons[] = {
 	{
 		.code                   = KEY_MENU,
-		.gpio                   = GPIO_KEY10,
+		.gpio                   = GPIO_KEY9,
 		.active_low             = true,
 		.desc                   = "menu",
 		.type                   = EV_KEY,
@@ -863,7 +863,7 @@ static struct gpio_keys_button am335x_evm_volume_gpio_buttons[] = {
 	},
 	{
 		.code                   = KEY_BACK,
-		.gpio                   = GPIO_KEY9,
+		.gpio                   = GPIO_KEY10,
 		.active_low             = true,
 		.desc                   = "back",
 		.type                   = EV_KEY,
@@ -871,7 +871,7 @@ static struct gpio_keys_button am335x_evm_volume_gpio_buttons[] = {
 	},
 	{
 		.code                   = KEY_VOLUMEUP,
-		.gpio                   = GPIO_KEY8,
+		.gpio                   = GPIO_KEY7,
 		.active_low             = true,
 		.desc                   = "volumeup",
 		.type                   = EV_KEY,
@@ -879,7 +879,7 @@ static struct gpio_keys_button am335x_evm_volume_gpio_buttons[] = {
 	},
 	{
 		.code                   = KEY_VOLUMEDOWN,
-		.gpio                   = GPIO_KEY7,
+		.gpio                   = GPIO_KEY8,
 		.active_low             = true,
 		.desc                   = "volumedown",
 		.type                   = EV_KEY,
@@ -985,7 +985,8 @@ static void __init omap3beagle_flash_init(void)
 static struct ehci_hcd_omap_platform_data ehci_pdata __initdata = {
 
 	.port_mode[0] = EHCI_HCD_OMAP_MODE_PHY,
-	.port_mode[1] = EHCI_HCD_OMAP_MODE_PHY,
+	//.port_mode[1] = EHCI_HCD_OMAP_MODE_PHY,
+	.port_mode[1] = EHCI_HCD_OMAP_MODE_UNKNOWN,
 	.port_mode[2] = EHCI_HCD_OMAP_MODE_UNKNOWN,
 
 	.phy_reset  = true,
