@@ -965,6 +965,8 @@ dm9000_rx(struct net_device *dev)
 	/* Check packet ready or not */
 	do {
 		ior(db, DM9000_MRCMDX);	/* Dummy read */
+		udelay(100);
+		ior(db, DM9000_MRCMDX);	/* Dummy read */
 
 		/* Get most updated data */
 		rxbyte = readb(db->io_data);
@@ -1186,6 +1188,8 @@ dm9000_open(struct net_device *dev)
 
 	/* Init driver variable */
 	db->dbug_cnt = 0;
+
+	mdelay(10);
 
 	mii_check_media(&db->mii, netif_msg_link(db), 1);
 	netif_start_queue(dev);
