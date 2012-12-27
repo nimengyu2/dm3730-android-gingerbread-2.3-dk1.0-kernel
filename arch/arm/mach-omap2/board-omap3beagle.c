@@ -1011,6 +1011,8 @@ static void __init omap3sbc8100_plus_init_dm9000(void)
 
 	// init gpmc mux
 	omap_mux_init_signal("gpmc_ncs3", OMAP_PIN_OUTPUT);
+	omap_mux_init_signal("gpmc_ncs6", OMAP_PIN_OUTPUT);
+	omap_mux_init_signal("gpmc_ncs7", OMAP_PIN_OUTPUT);
 	omap_mux_init_signal("gpmc_a4", OMAP_PIN_OUTPUT);
 
 	omap_mux_init_gpio(OMAP_DM9000_GPIO_IRQ, OMAP_PIN_OUTPUT);

@@ -18,8 +18,7 @@
  *	Ben Dooks <ben@simtec.co.uk>
  *	Sascha Hauer <s.hauer@pengutronix.de>
  */
-
-//#define DEBUG    1 
+#define DEBUG    1 
 #include <linux/module.h>
 #include <linux/ioport.h>
 #include <linux/netdevice.h>
@@ -32,16 +31,15 @@
 #include <linux/ethtool.h>
 #include <linux/dm9000.h>
 #include <linux/delay.h>
-
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 
 #include <asm/delay.h>
 #include <asm/irq.h>
 #include <asm/io.h>
+#include <linux/lierda_debug.h>
 
 #include "dm9000.h"
-#include <linux/lierda_debug.h>
 
 /* Board/System/Debug information/definition ---------------- */
 
@@ -56,9 +54,7 @@
 static int watchdog = 5000;
 module_param(watchdog, int, 0400);
 MODULE_PARM_DESC(watchdog, "transmit timeout in milliseconds");
-// 5C-26-0A-17-D1-73
-static unsigned char mac_addr[6] = {0x5C,0x26,0x0A,0x17,0xD1,0x75};//embest
-//static unsigned char mac_addr[6] = {0x00,0x11,0x22,0x33,0x44,0x55};//embest
+
 /* DM9000 register address locking.
  *
  * The DM9000 uses an address register to control where data written
@@ -142,17 +138,11 @@ typedef struct board_info {
 
 /* debug code */
 
-#if 0
 #define dm9000_dbg(db, lev, msg...) do {		\
 	if ((lev) < CONFIG_DM9000_DEBUGLEVEL &&		\
 	    (lev) < db->debug_level) {			\
 		dev_dbg(db->dev, msg);			\
 	}						\
-} while (0)
-#endif
-
-#define dm9000_dbg(db, lev, msg...) do {		\
-		dev_dbg(db->dev, msg);			\
 } while (0)
 
 static inline board_info_t *to_dm9000_board(struct net_device *dev)
@@ -160,15 +150,12 @@ static inline board_info_t *to_dm9000_board(struct net_device *dev)
 	return netdev_priv(dev);
 }
 
-static void iow(board_info_t * db, int reg, int value);
-
 /* DM9000 network board routine ---------------------------- */
 
 static void
 dm9000_reset(board_info_t * db)
 {
 	dev_dbg(db->dev, "resetting device\n");
-	lsd_eth_dbg(LSD_DBG,"resetting device\n");
 
 	/* RESET device */
 	writeb(DM9000_NCR, db->io_addr);
@@ -523,15 +510,10 @@ static u32 dm9000_get_link(struct net_device *dev)
 	u32 ret;
 
 	if (dm->flags & DM9000_PLATF_EXT_PHY)
-	{
 		ret = mii_link_ok(&dm->mii);
-		lsd_eth_dbg(LSD_DBG,"mii_link_ok dm->mii ret=%d\n",ret);
-	}	
 	else
-	{	
 		ret = dm9000_read_locked(dm, DM9000_NSR) & NSR_LINKST ? 1 : 0;
-		lsd_eth_dbg(LSD_DBG,"dm9000_read_locked ret=%d\n",ret);
-	}
+
 	return ret;
 }
 
@@ -665,11 +647,11 @@ static void dm9000_show_carrier(board_info_t *db,
 	unsigned ncr = dm9000_read_locked(db, DM9000_NCR);
 
 	if (carrier)
-		dev_info(db->dev, "yuge %s: link up, %dMbps, %s-duplex, no LPA\n",
+		dev_info(db->dev, "%s: link up, %dMbps, %s-duplex, no LPA\n",
 			 ndev->name, (nsr & NSR_SPEED) ? 10 : 100,
 			 (ncr & NCR_FDX) ? "full" : "half");
 	else
-		dev_info(db->dev, "yuge %s: link down\n", ndev->name);
+		dev_info(db->dev, "%s: link down\n", ndev->name);
 }
 
 static void
@@ -876,8 +858,6 @@ static void dm9000_send_packet(struct net_device *dev,
 {
 	board_info_t *dm = to_dm9000_board(dev);
 
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_send_packet\n");
-
 	/* The DM9000 is not smart enough to leave fragmented packets alone. */
 	if (dm->ip_summed != ip_summed) {
 		if (ip_summed == CHECKSUM_NONE)
@@ -906,7 +886,6 @@ dm9000_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	board_info_t *db = netdev_priv(dev);
 
 	dm9000_dbg(db, 3, "%s:\n", __func__);
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_start_xmit\n");
 
 	if (db->tx_pkt_cnt > 1)
 		return NETDEV_TX_BUSY;
@@ -946,7 +925,6 @@ dm9000_start_xmit(struct sk_buff *skb, struct net_device *dev)
 static void dm9000_tx_done(struct net_device *dev, board_info_t *db)
 {
 	int tx_status = ior(db, DM9000_NSR);	/* Got TX status */
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_tx_done\n");
 
 	if (tx_status & (NSR_TX2END | NSR_TX1END)) {
 		/* One packet sent complete */
@@ -983,21 +961,14 @@ dm9000_rx(struct net_device *dev)
 	bool GoodPacket;
 	int RxLen;
 
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_rx\n");
-
 	/* Check packet ready or not */
 	do {
 		ior(db, DM9000_MRCMDX);	/* Dummy read */
+		udelay(100);
+		ior(db, DM9000_MRCMDX);	/* Dummy read */
 
 		/* Get most updated data */
 		rxbyte = readb(db->io_data);
-		lsd_eth_dbg(LSD_DBG,"rxbyte=0x%02x\n",rxbyte);
-#if 0
-		ior(db, DM9000_MRCMDX);	/* Dummy read */
-		/* Get most updated data */
-		rxbyte = readb(db->io_data);
-		lsd_eth_dbg(LSD_DBG,"rxbyte=0x%02x\n",rxbyte);
-#endif
 
 		/* Status check: this byte must be 0 or 1 */
 		if (rxbyte & DM9000_PKT_ERR) {
@@ -1094,7 +1065,6 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 	u8 reg_save;
 
 	dm9000_dbg(db, 3, "entering %s\n", __func__);
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_interrupt\n");
 
 	/* A real interrupt coming */
 
@@ -1110,8 +1080,6 @@ static irqreturn_t dm9000_interrupt(int irq, void *dev_id)
 	/* Got DM9000 interrupt status */
 	int_status = ior(db, DM9000_ISR);	/* Got ISR */
 	iow(db, DM9000_ISR, int_status);	/* Clear ISR status */
-
-	lsd_eth_dbg(LSD_DBG,"int_status=0x%08x\n",int_status);
 
 	if (netif_msg_intr(db))
 		dev_dbg(db->dev, "interrupt status %02x\n", int_status);
@@ -1198,12 +1166,10 @@ dm9000_open(struct net_device *dev)
 {
 	board_info_t *db = netdev_priv(dev);
 	unsigned long irqflags = db->irq_res->flags & IRQF_TRIGGER_MASK;
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_open\n");
 
 	if (netif_msg_ifup(db))
-	{
 		dev_dbg(db->dev, "enabling %s\n", dev->name);
-	}
+
 	/* If there is no IRQ type specified, default to something that
 	 * may work, and tell the user that this is a problem */
 
@@ -1213,14 +1179,8 @@ dm9000_open(struct net_device *dev)
 	irqflags |= IRQF_SHARED;
 
 	if (request_irq(dev->irq, dm9000_interrupt, irqflags, dev->name, dev))
-	{
-		lsd_eth_dbg(LSD_ERR,"request_irq error\n");
 		return -EAGAIN;
-	}
-	else
-	{
-		lsd_eth_dbg(LSD_OK,"request_irq ok\n");
-	}
+
 	/* Initialize DM9000 board */
 	dm9000_reset(db);
 	dm9000_init_dm9000(dev);
@@ -1228,15 +1188,12 @@ dm9000_open(struct net_device *dev)
 	/* Init driver variable */
 	db->dbug_cnt = 0;
 
-	//mdelay(10);
+	mdelay(10);
 
 	mii_check_media(&db->mii, netif_msg_link(db), 1);
 	netif_start_queue(dev);
-	lsd_eth_dbg(LSD_DBG,"netif_start_queue\n");
 	
 	dm9000_schedule_poll(db);
-
-	
 
 	return 0;
 }
@@ -1348,7 +1305,7 @@ static void
 dm9000_shutdown(struct net_device *dev)
 {
 	board_info_t *db = netdev_priv(dev);
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_shutdown\n");
+
 	/* RESET device */
 	dm9000_phy_write(dev, 0, MII_BMCR, BMCR_RESET);	/* PHY RESET */
 	iow(db, DM9000_GPR, 0x01);	/* Power-Down PHY */
@@ -1364,8 +1321,6 @@ static int
 dm9000_stop(struct net_device *ndev)
 {
 	board_info_t *db = netdev_priv(ndev);
-
-	lsd_eth_dbg(LSD_DBG,"enter dm9000_stop\n");
 
 	if (netif_msg_ifdown(db))
 		dev_dbg(db->dev, "shutting down %s\n", ndev->name);
@@ -1412,17 +1367,25 @@ dm9000_probe(struct platform_device *pdev)
 	int iosize;
 	int i;
 	u32 id_val;
+	
+	lsd_eth_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 
 	/* Init network device */
 	ndev = alloc_etherdev(sizeof(struct board_info));
 	if (!ndev) {
 		dev_err(&pdev->dev, "could not allocate device.\n");
+		lsd_eth_dbg(LSD_ERR,"could not allocate device.\n");
 		return -ENOMEM;
+	}
+	else
+	{
+		lsd_eth_dbg(LSD_OK,"ok to allocate device.\n");
 	}
 
 	SET_NETDEV_DEV(ndev, &pdev->dev);
 
 	dev_dbg(&pdev->dev, "dm9000_probe()\n");
+	lsd_eth_dbg(LSD_DBG,"dm9000_probe()\n");
 
 	/* setup board info structure */
 	db = netdev_priv(ndev);
@@ -1442,18 +1405,25 @@ dm9000_probe(struct platform_device *pdev)
 	if (db->addr_res == NULL || db->data_res == NULL ||
 	    db->irq_res == NULL) {
 		dev_err(db->dev, "insufficient resources\n");
+		lsd_eth_dbg(LSD_ERR,"insufficient resources failed\n");
 		ret = -ENOENT;
 		goto out;
+	}
+	else
+	{
+		lsd_eth_dbg(LSD_OK,"sufficient resources ok\n");
 	}
 
 	db->irq_wake = platform_get_irq(pdev, 1);
 	if (db->irq_wake >= 0) {
 		dev_dbg(db->dev, "wakeup irq %d\n", db->irq_wake);
+		lsd_eth_dbg(LSD_DBG,"wakeup irq %d\n", db->irq_wake);
 
 		ret = request_irq(db->irq_wake, dm9000_wol_interrupt,
 				  IRQF_SHARED, dev_name(db->dev), ndev);
 		if (ret) {
 			dev_err(db->dev, "cannot get wakeup irq (%d)\n", ret);
+			lsd_eth_dbg(LSD_ERR,"cannot get wakeup irq (%d)\n", ret);
 		} else {
 
 			/* test to see if irq is really wakeup capable */
@@ -1461,46 +1431,45 @@ dm9000_probe(struct platform_device *pdev)
 			if (ret) {
 				dev_err(db->dev, "irq %d cannot set wakeup (%d)\n",
 					db->irq_wake, ret);
+				lsd_eth_dbg(LSD_ERR,"irq %d cannot set wakeup (%d)\n",
+					db->irq_wake, ret);
 				ret = 0;
 			} else {
 				set_irq_wake(db->irq_wake, 0);
 				db->wake_supported = 1;
+
+				lsd_eth_dbg(LSD_OK,"irq %d ok set wakeup (%d)\n",
+					db->irq_wake, ret);
 			}
 		}
 	}
-	else
-	{
-		lsd_eth_dbg(LSD_DBG,"db->irq_wake < 0\n");
-	}
 
 	iosize = resource_size(db->addr_res);
-	
 	db->addr_req = request_mem_region(db->addr_res->start, iosize,
 					  pdev->name);
 
 	if (db->addr_req == NULL) {
 		dev_err(db->dev, "cannot claim address reg area\n");
-		lsd_eth_dbg(LSD_ERR,"request_mem_region error\n");
+		lsd_eth_dbg(LSD_ERR, "cannot claim address reg area\n");
 		ret = -EIO;
 		goto out;
 	}
 	else
 	{
-		lsd_eth_dbg(LSD_OK,"request_mem_region ok\n");
+		lsd_eth_dbg(LSD_OK, "ok to claim address reg area\n");
 	}
 
 	db->io_addr = ioremap(db->addr_res->start, iosize);
-	
+
 	if (db->io_addr == NULL) {
 		dev_err(db->dev, "failed to ioremap address reg\n");
-		lsd_eth_dbg(LSD_ERR,"failed to ioremap address reg\n");
+		lsd_eth_dbg(LSD_ERR, "failed to ioremap address reg\n");
 		ret = -EINVAL;
 		goto out;
 	}
 	else
 	{
-		lsd_eth_dbg(LSD_OK,"success to ioremap address reg\n");
-		lsd_eth_dbg(LSD_DBG,"db->addr_res->start=0x%08x,db->io_addr=0x%08x\n",db->addr_res->start,db->io_addr);
+		lsd_eth_dbg(LSD_OK, "ok to ioremap address reg\n");
 	}
 
 	iosize = resource_size(db->data_res);
@@ -1515,7 +1484,7 @@ dm9000_probe(struct platform_device *pdev)
 	}
 	else
 	{
-		lsd_eth_dbg(LSD_OK,"success claim data reg area\n");
+		lsd_eth_dbg(LSD_OK,"ok to claim data reg area\n");
 	}
 
 	db->io_data = ioremap(db->data_res->start, iosize);
@@ -1528,8 +1497,7 @@ dm9000_probe(struct platform_device *pdev)
 	}
 	else
 	{
-		lsd_eth_dbg(LSD_OK,"success to ioremap data reg\n");
-		lsd_eth_dbg(LSD_DBG,"db->data_res->start=0x%08x,db->io_data=0x%08x\n",db->data_res->start,db->io_data);
+		lsd_eth_dbg(LSD_OK,"ok to ioremap data reg\n");
 	}
 
 	/* fill in parameters for net-dev structure */
@@ -1584,38 +1552,28 @@ dm9000_probe(struct platform_device *pdev)
 		if (id_val == DM9000_ID)
 			break;
 		dev_err(db->dev, "read wrong id 0x%08x\n", id_val);
-		lsd_eth_dbg(LSD_ERR, "read wrong id 0x%08x\n", id_val);
 	}
 
 	if (id_val != DM9000_ID) {
 		dev_err(db->dev, "wrong id: 0x%08x\n", id_val);
-		lsd_eth_dbg(LSD_ERR,  "wrong id: 0x%08x\n", id_val);
 		ret = -ENODEV;
 		goto out;
-	}
-	else
-	{
-		lsd_eth_dbg(LSD_OK,  "id_val =0x%08x\n", id_val);
 	}
 
 	/* Identify what type of DM9000 we are working on */
 
 	id_val = ior(db, DM9000_CHIPR);
 	dev_dbg(db->dev, "dm9000 revision 0x%02x\n", id_val);
-	lsd_eth_dbg(LSD_DBG,"dm9000 revision 0x%02x\n", id_val);
 
 	switch (id_val) {
 	case CHIPR_DM9000A:
 		db->type = TYPE_DM9000A;
-		lsd_eth_dbg(LSD_DBG,"dm9000 TYPE_DM9000A\n");
 		break;
 	case CHIPR_DM9000B:
 		db->type = TYPE_DM9000B;
-		lsd_eth_dbg(LSD_DBG,"dm9000 TYPE_DM9000B\n");
 		break;
 	default:
 		dev_dbg(db->dev, "ID %02x => defaulting to DM9000E\n", id_val);
-		lsd_eth_dbg(LSD_DBG, "ID %02x => defaulting to DM9000E\n", id_val);
 		db->type = TYPE_DM9000E;
 	}
 
@@ -1660,20 +1618,12 @@ dm9000_probe(struct platform_device *pdev)
 		
 		mac_src = "chip";
 		for (i = 0; i < 6; i++)
-			//ndev->dev_addr[i] = ior(db, i+DM9000_PAR);
-			ndev->dev_addr[i] = mac_addr[i];
+			ndev->dev_addr[i] = ior(db, i+DM9000_PAR);
 	}
 
 	if (!is_valid_ether_addr(ndev->dev_addr))
-	{	
 		dev_warn(db->dev, "%s: Invalid ethernet MAC address. Please "
 			 "set using ifconfig\n", ndev->name);
-		lsd_eth_dbg(LSD_ERR,"ethernet MAC address is not valid \n");
-	}
-	else
-	{
-		lsd_eth_dbg(LSD_OK,"ethernet MAC address is valid \n");
-	}
 
 	platform_set_drvdata(pdev, ndev);
 	ret = register_netdev(ndev);
@@ -1683,15 +1633,6 @@ dm9000_probe(struct platform_device *pdev)
 		       ndev->name, dm9000_type_to_char(db->type),
 		       db->io_addr, db->io_data, ndev->irq,
 		       ndev->dev_addr, mac_src);
-
-#if 0
-	while(1)
-	{
-		writew(0x5555,db->io_addr);
-	}
-#endif
-
-
 	return 0;
 
 out:
@@ -1709,6 +1650,7 @@ dm9000_drv_suspend(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	board_info_t *db;
+	lsd_eth_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 
 	if (ndev) {
 		db = netdev_priv(ndev);
@@ -1732,6 +1674,8 @@ dm9000_drv_resume(struct device *dev)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	board_info_t *db = netdev_priv(ndev);
+
+	lsd_eth_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 
 	if (ndev) {
 		if (netif_running(ndev)) {
@@ -1760,6 +1704,7 @@ dm9000_drv_remove(struct platform_device *pdev)
 {
 	struct net_device *ndev = platform_get_drvdata(pdev);
 
+	lsd_eth_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 	platform_set_drvdata(pdev, NULL);
 
 	unregister_netdev(ndev);
@@ -1783,6 +1728,7 @@ static struct platform_driver dm9000_driver = {
 static int __init
 dm9000_init(void)
 {
+	lsd_eth_dbg(LSD_DBG,"%s Ethernet Driver, V%s\n", CARDNAME, DRV_VERSION);
 	printk(KERN_INFO "%s Ethernet Driver, V%s\n", CARDNAME, DRV_VERSION);
 
 	return platform_driver_register(&dm9000_driver);
@@ -1791,6 +1737,7 @@ dm9000_init(void)
 static void __exit
 dm9000_cleanup(void)
 {
+	lsd_eth_dbg(LSD_DBG,"enter function=%s\n",__FUNCTION__);
 	platform_driver_unregister(&dm9000_driver);
 }
 
