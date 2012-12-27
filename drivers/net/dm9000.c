@@ -31,12 +31,14 @@
 #include <linux/ethtool.h>
 #include <linux/dm9000.h>
 #include <linux/delay.h>
+#define DEBUG
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 
 #include <asm/delay.h>
 #include <asm/irq.h>
 #include <asm/io.h>
+#include <linux/lierda_debug.h>
 
 #include "dm9000.h"
 

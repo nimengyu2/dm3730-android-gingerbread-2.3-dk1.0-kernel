@@ -51,6 +51,8 @@
 
 #include <linux/lierda_debug.h>
 #include <linux/i2c/tsc2007.h> // Modify by nmy
+#include <linux/interrupt.h>
+#include <linux/dm9000.h>
 
 #include "mux.h"
 #include "mmc-twl4030.h"
@@ -937,11 +939,127 @@ static void __init omap3_beagle_init_irq(void)
 	omap_gpio_init();
 }
 
+
+//--------------------------------------------------------------//
+
+
+#define OMAP_DM9000_BASE        0x2c000000
+#define OMAP_DM9000_GPIO_IRQ    25
+static struct resource omap3sbc8100_plus_dm9000_resources[] = {
+        [0] =   {
+                .start  = OMAP_DM9000_BASE,
+                .end    = (OMAP_DM9000_BASE + 0x4 - 1),
+                .flags  = IORESOURCE_MEM,
+        },
+        [1] =   {
+                .start  = (OMAP_DM9000_BASE + 0x10),
+                .end    = (OMAP_DM9000_BASE + 0x10 + 0x4 - 1),
+                .flags  = IORESOURCE_MEM,
+        },
+        [2] =   {
+                .start  = OMAP_GPIO_IRQ(OMAP_DM9000_GPIO_IRQ),
+                .end    = OMAP_GPIO_IRQ(OMAP_DM9000_GPIO_IRQ),
+                .flags  = IORESOURCE_IRQ | IRQF_TRIGGER_LOW,
+        },
+};
+
+static struct dm9000_plat_data omap_dm9000_platdata = {
+        .flags = DM9000_PLATF_16BITONLY | DM9000_PLATF_NO_EEPROM,
+	.dev_addr[0] =  0x5C,
+	.dev_addr[1] =  0x26,
+	.dev_addr[2] =  0x0A,
+	.dev_addr[3] =  0x17,
+	.dev_addr[4] =  0xD1,
+	.dev_addr[5] =  0x88,
+};
+
+static struct platform_device omap3sbc8100_plus_dm9000_device = {
+        .name           = "dm9000",
+        .id             = -1,
+        .num_resources  = ARRAY_SIZE(omap3sbc8100_plus_dm9000_resources),
+        .resource       = omap3sbc8100_plus_dm9000_resources,
+        .dev            = {
+                .platform_data = &omap_dm9000_platdata,
+        },
+};
+
+
+#define NET_GPMC_CONFIG1	0x00001000
+#define NET_GPMC_CONFIG2	0x001e1e00
+#define NET_GPMC_CONFIG3	0x00080300
+#define NET_GPMC_CONFIG4	0x1c091c09
+#define NET_GPMC_CONFIG5	0x04181f1f
+#define NET_GPMC_CONFIG6	0x00000FCF
+#define NET_GPMC_CONFIG7	0x00000f6c
+
+#define GPMC_CS3 3
+
+static const u32 gpmc_nor2[7] = {
+	 NET_GPMC_CONFIG1,
+	 NET_GPMC_CONFIG2,
+	 NET_GPMC_CONFIG3 ,
+	 NET_GPMC_CONFIG4,
+	 NET_GPMC_CONFIG5,
+	 NET_GPMC_CONFIG6, 
+	 NET_GPMC_CONFIG7
+};
+
+
+static void __init omap3sbc8100_plus_init_dm9000(void)
+{
+
+	// init gpmc mux
+	omap_mux_init_signal("gpmc_ncs3", OMAP_PIN_OUTPUT);
+	omap_mux_init_signal("gpmc_a4", OMAP_PIN_OUTPUT);
+
+	omap_mux_init_gpio(OMAP_DM9000_GPIO_IRQ, OMAP_PIN_OUTPUT);
+	//omap_mux_init_signal("sdrc_cke0", OMAP_PIN_OUTPUT);
+	gpio_request(OMAP_DM9000_GPIO_IRQ, "dm9000");
+	gpio_direction_output(OMAP_DM9000_GPIO_IRQ,1);
+	gpio_set_value(OMAP_DM9000_GPIO_IRQ,1);
+
+	omap_mux_init_gpio(OMAP_DM9000_GPIO_IRQ, OMAP_PIN_INPUT_PULLUP);
+#if 0
+        if (gpio_request(OMAP_DM9000_GPIO_IRQ, "dm9000 irq") < 0) {
+                printk(KERN_ERR "Failed to request GPIO%d for dm9000 IRQ\n",
+                        OMAP_DM9000_GPIO_IRQ);
+		lsd_eth_dbg(LSD_ERR,"gpio_request OMAP_DM9000_GPIO_IRQ error\n");
+                return;
+        }
+	else
+	{
+		lsd_eth_dbg(LSD_OK,"gpio_request OMAP_DM9000_GPIO_IRQ ok\n");
+	}
+#endif
+
+        gpio_direction_input(OMAP_DM9000_GPIO_IRQ);
+
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG1, gpmc_nor2[0]);
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG2, gpmc_nor2[1]);
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG3, gpmc_nor2[2]);
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG4, gpmc_nor2[3]);
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG5, gpmc_nor2[4]);
+
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG6, gpmc_nor2[5]);
+	
+	//val = gpmc_cs_read_reg(GPMC_CS, GPMC_CS_CONFIG7);
+	//val |= (1 << 6);
+	gpmc_cs_write_reg(GPMC_CS3, GPMC_CS_CONFIG7, gpmc_nor2[6]);
+}
+
+
+
 static struct platform_device *omap3_beagle_devices[] __initdata = {
 	&leds_gpio,
 	&keys_gpio,
 	&beagle_dss_device,
 	&beagle_cam_device,
+	&omap3sbc8100_plus_dm9000_device,
 };
 
 static void __init omap3beagle_flash_init(void)
@@ -1045,11 +1163,13 @@ static void __init omap3_beagle_init(void)
 	printk("enter func=%s\n",__FUNCTION__);
 	omap3_mux_init(board_mux, OMAP_PACKAGE_CBB);
 	omap3_beagle_i2c_init();
+
+	omap3sbc8100_plus_init_dm9000();
+	volume_keys_init();
+
 	platform_add_devices(omap3_beagle_devices,
 			ARRAY_SIZE(omap3_beagle_devices));
 	omap_serial_init();
-
-	volume_keys_init();
 
 	omap_mux_init_gpio(170, OMAP_PIN_INPUT);
 	gpio_request(170, "DVI_nPD");
