@@ -345,10 +345,12 @@ static void __init prcm_setup_regs(void)
 	struct powerdomain *pwrdm;
 
 	/* Enable autoidle */
+	// 使能自动空闲
 	prm_write_mod_reg(OMAP24XX_AUTOIDLE, OCP_MOD,
 			  OMAP2_PRCM_SYSCONFIG_OFFSET);
 
 	/* Set all domain wakeup dependencies */
+	// 设定所有的范围都是独立唤醒的
 	prm_write_mod_reg(OMAP_EN_WKUP_MASK, MPU_MOD, PM_WKDEP);
 	prm_write_mod_reg(0, OMAP24XX_DSP_MOD, PM_WKDEP);
 	prm_write_mod_reg(0, GFX_MOD, PM_WKDEP);
@@ -360,6 +362,7 @@ static void __init prcm_setup_regs(void)
 	 * Set CORE powerdomain memory banks to retain their contents
 	 * during RETENTION
 	 */
+	 // 设定core电源管理内存banks
 	num_mem_banks = pwrdm_get_mem_bank_count(core_pwrdm);
 	for (i = 0; i < num_mem_banks; i++)
 		pwrdm_set_mem_retst(core_pwrdm, i, PWRDM_POWER_RET);

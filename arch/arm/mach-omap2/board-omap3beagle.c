@@ -670,6 +670,7 @@ static struct i2c_board_info __initdata beagle_i2c2_boardinfo[] = {
 #endif
 };
 
+// 初始化iic总线
 static int __init omap3_beagle_i2c_init(void)
 {
 	omap_register_i2c_bus(1, 2600, beagle_i2c1_boardinfo,

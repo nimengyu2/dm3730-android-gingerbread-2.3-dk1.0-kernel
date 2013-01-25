@@ -166,6 +166,7 @@ dm9000_reset(board_info_t * db)
 /*
  *   Read a byte from I/O port
  */
+ // 从io端口读取一个字节
 static u8
 ior(board_info_t * db, int reg)
 {
@@ -950,6 +951,7 @@ struct dm9000_rxhdr {
 /*
  *  Received a packet and pass to upper layer
  */
+ // 接收包，然后传递给上层程序
 static void
 dm9000_rx(struct net_device *dev)
 {
@@ -961,13 +963,16 @@ dm9000_rx(struct net_device *dev)
 	int RxLen;
 
 	/* Check packet ready or not */
+	// 检查包是否准备好了
 	do {
-		ior(db, DM9000_MRCMDX);	/* Dummy read */
+		ior(db, DM9000_MRCMDX);	/* Dummy read */  // 读取
 
 		/* Get most updated data */
+		// 获取一个数据
 		rxbyte = readb(db->io_data);
 
 		/* Status check: this byte must be 0 or 1 */
+		// 这个字节必须是0和1
 		if (rxbyte & DM9000_PKT_ERR) {
 			dev_warn(db->dev, "status check fail: %d\n", rxbyte);
 			iow(db, DM9000_RCR, 0x00);	/* Stop Device */

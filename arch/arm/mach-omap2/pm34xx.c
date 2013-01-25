@@ -17,6 +17,7 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
+ // 该文件在dm3730 beagleboard config的时候会编译进去
 
 #include <linux/pm.h>
 #include <linux/suspend.h>
@@ -56,6 +57,7 @@
 #include "pm.h"
 #include "sdrc.h"
 
+// 如果定义了挂起
 #ifdef CONFIG_SUSPEND
 static suspend_state_t suspend_state = PM_SUSPEND_ON;
 static inline bool is_suspending(void)
@@ -765,6 +767,7 @@ static int omap3_pm_prepare(void)
 	return 0;
 }
 
+// pm挂起
 static int omap3_pm_suspend(void)
 {
 	struct power_state *pwrst;
@@ -1250,14 +1253,19 @@ void omap_push_sram_idle(void)
 				save_secure_ram_context_sz);
 }
 
+
+
+// omap3 pm初始化
 static int __init omap3_pm_init(void)
 {
 	struct power_state *pwrst, *tmp;
 	int ret;
 
+	// 如果不是omap34xx则返回
 	if (!cpu_is_omap34xx())
 		return -ENODEV;
 
+    // 打印输出信息，在内核启动的时候
 	printk(KERN_ERR "Power Management for TI OMAP3.\n");
 
 	/* XXX prcm_setup_regs needs to be before enabling hw
